@@ -1,0 +1,80 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.welcomeOverlay {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	height: 100%;
+	width: 100%;
+	z-index: 999;
+	background: rgba(0,0,0,0.5);
+}
+
+.welcomeOverlay > .key {
+	font-family: "Lucida Grande", sans-serif;
+	font-size: 20px;
+	color: #FFF;
+}
+
+.welcomeOverlay > .key > .label {
+	padding-left: 1ex;
+}
+
+.welcomeOverlay > .key.explorer {
+	position: absolute;
+	top: 13px;
+	left: 60px;
+}
+
+.welcomeOverlay > .key.search {
+	position: absolute;
+	top: 63px;
+	left: 60px;
+}
+
+.welcomeOverlay > .key.git {
+	position: absolute;
+	top: 113px;
+	left: 60px;
+}
+
+.welcomeOverlay > .key.debug {
+	position: absolute;
+	top: 163px;
+	left: 60px;
+}
+
+.welcomeOverlay > .key.extensions {
+	position: absolute;
+	top: 213px;
+	left: 60px;
+}
+
+.welcomeOverlay > .key.watermark {
+	position: absolute;
+	top: calc(50% + 30px);
+	left: calc(50% + 30px);
+}
+
+.welcomeOverlay > .key.watermark > .label {
+	vertical-align: super;
+}
+
+@media (max-height: 500px) {
+	.welcomeOverlay > .key.watermark {
+		display: none;
+	}
+}
+
+.welcomeOverlay > .key.problems {
+	position: absolute;
+	bottom: 25px;
+	left: 45px;
+}
+
+.welcomeOverlay > .key.problems > .label {
+	vertical-align: super;
+}
