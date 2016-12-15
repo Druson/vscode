@@ -22,6 +22,10 @@ import { IProgressService, IProgressRunner } from 'vs/platform/progress/common/p
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IStorageService } from 'vs/platform/storage/common/storage';
+import env = require('vs/base/common/platform');
+import { Button } from 'vs/base/browser/ui/button/button';
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import { IMessageService, Severity } from 'vs/platform/message/common/message';
 
 export class DebugViewlet extends Viewlet {
 
@@ -33,6 +37,7 @@ export class DebugViewlet extends Viewlet {
 	private $el: Builder;
 	private splitView: SplitView;
 	private views: IViewletView[];
+	private openFolderButton: Button;
 
 	private lastFocusedView: IViewletView;
 
@@ -42,6 +47,8 @@ export class DebugViewlet extends Viewlet {
 		@IDebugService private debugService: IDebugService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@ICommandService private commandService: ICommandService,
+		@IMessageService private messageService: IMessageService,
 		@IStorageService storageService: IStorageService
 	) {
 		super(VIEWLET_ID, telemetryService);
@@ -78,12 +85,22 @@ export class DebugViewlet extends Viewlet {
 				this.lastFocusedView = view;
 			}));
 		} else {
-			this.$el.append($([
+			const noworkspace = $([
 				'<div class="noworkspace-view">',
-				'<p>', nls.localize('noWorkspace', "There is no currently opened folder."), '</p>',
+				'<p>', nls.localize('noWorkspaceHelp', "You have not yet opened a folder."), '</p>',
 				'<p>', nls.localize('pleaseRestartToDebug', "Open a folder in order to start debugging."), '</p>',
 				'</div>'
-			].join('')));
+			].join(''));
+
+			this.openFolderButton = new Button(noworkspace);
+			this.openFolderButton.label = nls.localize('openFolder', "Open Folder");
+			this.openFolderButton.addListener2('click', () => {
+				const actionId = env.isMacintosh ? 'workbench.action.files.openFileFolder' : 'workbench.action.files.openFolder';
+				this.commandService.executeCommand(actionId, { from: 'debug' })
+					.done(undefined, err => this.messageService.show(Severity.Error, err));
+			});
+
+			this.$el.append(noworkspace);
 		}
 
 		return TPromise.as(null);
@@ -111,6 +128,11 @@ export class DebugViewlet extends Viewlet {
 
 		if (this.views.length > 0) {
 			this.views[0].focusBody();
+			return;
+		}
+
+		if (this.openFolderButton) {
+			this.openFolderButton.getElement().focus();
 		}
 	}
 

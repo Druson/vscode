@@ -54,6 +54,8 @@ import { IReplaceService } from 'vs/workbench/parts/search/common/replace';
 import Severity from 'vs/base/common/severity';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import * as Constants from 'vs/workbench/parts/search/common/constants';
+import env = require('vs/base/common/platform');
+import { ICommandService } from 'vs/platform/commands/common/commands';
 
 export class SearchViewlet extends Viewlet {
 
@@ -104,6 +106,7 @@ export class SearchViewlet extends Viewlet {
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IReplaceService private replaceService: IReplaceService,
 		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
+		@ICommandService private commandService: ICommandService,
 		@IPreferencesService private preferencesService: IPreferencesService
 	) {
 		super(Constants.VIEWLET_ID, telemetryService);
@@ -220,6 +223,9 @@ export class SearchViewlet extends Viewlet {
 		}).getHTMLElement();
 
 		this.messages = builder.div({ 'class': 'messages' }).hide().clone();
+		if (!this.contextService.getWorkspace()) {
+			this.searchWithoutFolderMessage(this.clearMessage());
+		}
 
 		this.createSearchResultsView(builder);
 
@@ -358,7 +364,8 @@ export class SearchViewlet extends Viewlet {
 			this.searchWidget.setReplaceAllActionState(false);
 			this.viewModel.searchResult.replaceAll(progressRunner).then(() => {
 				progressRunner.done();
-				this.showMessage(afterReplaceAllMessage);
+				this.clearMessage()
+					.p({ text: afterReplaceAllMessage });
 			}, (error) => {
 				progressRunner.done();
 				errors.isPromiseCanceledError(error);
@@ -367,8 +374,10 @@ export class SearchViewlet extends Viewlet {
 		}
 	}
 
-	private showMessage(text: string): Builder {
-		return this.messages.empty().show().asContainer().div({ 'class': 'message', text: text });
+	private clearMessage(): Builder {
+		return this.messages.empty().show()
+			.asContainer().div({ 'class': 'message' })
+			.asContainer();
 	}
 
 	private createSearchResultsView(builder: Builder): void {
@@ -846,10 +855,11 @@ export class SearchViewlet extends Viewlet {
 
 				this.tree.onHidden();
 				this.results.hide();
-				let div = this.showMessage(message);
+				const div = this.clearMessage();
+				const p = $(div).p({ text: message });
 
 				if (!completed) {
-					$(div).a({
+					$(p).a({
 						'class': ['pointer', 'prominent'],
 						text: nls.localize('rerunSearch.message', "Search again")
 					}).on(dom.EventType.CLICK, (e: MouseEvent) => {
@@ -858,7 +868,7 @@ export class SearchViewlet extends Viewlet {
 						this.onQueryChanged(true);
 					});
 				} else if (hasIncludes || hasExcludes) {
-					$(div).a({
+					$(p).a({
 						'class': ['pointer', 'prominent'],
 						'tabindex': '0',
 						text: nls.localize('rerunSearchInAll.message', "Search again in all files")
@@ -871,15 +881,23 @@ export class SearchViewlet extends Viewlet {
 						this.onQueryChanged(true);
 					});
 				} else {
-					$(div).a({
+					$(p).a({
 						'class': ['pointer', 'prominent'],
 						'tabindex': '0',
 						text: nls.localize('openSettings.message', "Open Settings")
 					}).on(dom.EventType.CLICK, (e: MouseEvent) => {
 						dom.EventHelper.stop(e, false);
 
-						this.preferencesService.openWorkspaceSettings().done(() => null, errors.onUnexpectedError);
+						if (this.contextService.getWorkspace()) {
+							this.preferencesService.openWorkspaceSettings().done(() => null, errors.onUnexpectedError);
+						} else {
+							this.preferencesService.openGlobalSettings().done(() => null, errors.onUnexpectedError);
+						}
 					});
+				}
+
+				if (!this.contextService.getWorkspace()) {
+					this.searchWithoutFolderMessage(div);
 				}
 			} else {
 				this.viewModel.searchResult.toggleHighlights(true); // show highlights
@@ -955,6 +973,21 @@ export class SearchViewlet extends Viewlet {
 		this.searchWidget.setReplaceAllActionState(false);
 		this.replaceService.disposeAllInputs();
 		this.viewModel.search(query).done(onComplete, onError, onProgress);
+	}
+
+	private searchWithoutFolderMessage(div: Builder): void {
+		$(div).p({ text: nls.localize('searchWithoutFolder', "You have not yet opened a folder. Only open files are currently searched - ") })
+			.asContainer().a({
+				'class': ['pointer', 'prominent'],
+				'tabindex': '0',
+				text: nls.localize('openFolder', "Open Folder")
+			}).on(dom.EventType.CLICK, (e: MouseEvent) => {
+				dom.EventHelper.stop(e, false);
+
+				const actionId = env.isMacintosh ? 'workbench.action.files.openFileFolder' : 'workbench.action.files.openFolder';
+				this.commandService.executeCommand(actionId, { from: 'debug' })
+					.done(undefined, err => this.messageService.show(Severity.Error, err));
+			});
 	}
 
 	private showEmptyStage(): void {
