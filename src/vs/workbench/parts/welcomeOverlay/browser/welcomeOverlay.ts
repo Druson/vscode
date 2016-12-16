@@ -13,12 +13,15 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IWorkbenchContribution, IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Parts, IPartService } from 'vs/workbench/services/part/common/partService';
 
 interface Key {
 	id: string;
 	arrow: string;
 	label: string;
+	arrowLast?: boolean;
+	withEditor?: boolean;
 }
 
 const keys: Key[] = [
@@ -50,12 +53,20 @@ const keys: Key[] = [
 	{
 		id: 'watermark',
 		arrow: '&larrpl;',
-		label: 'Command Hints'
+		label: 'Command Hints',
+		withEditor: false
 	},
 	{
 		id: 'problems',
 		arrow: '&larrpl;',
 		label: 'Problems View'
+	},
+	{
+		id: 'openfile',
+		arrow: '&cudarrl;',
+		label: 'File Properties',
+		arrowLast: true,
+		withEditor: true
 	},
 ];
 
@@ -67,6 +78,7 @@ export class WelcomeOverlayContribution implements IWorkbenchContribution {
 		@ILifecycleService lifecycleService: ILifecycleService,
 		@IPartService private partService: IPartService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@ITelemetryService telemetryService: ITelemetryService
 	) {
 		lifecycleService.onShutdown(this.dispose, this);
@@ -95,11 +107,18 @@ export class WelcomeOverlayContribution implements IWorkbenchContribution {
 			overlay.display('none');
 		}, this.toDispose);
 
-		keys.forEach(({ id, arrow, label }) => {
-			const div = $(overlay).div({ 'class': ['key', id] });
-			$(div).span({ 'class': 'arrow' }).innerHtml(arrow);
-			$(div).span({ 'class': 'label' }).text(label);
-		});
+		const editorOpen = !!this.editorService.getVisibleEditors().length;
+		keys.filter(key => !('withEditor' in key) || key.withEditor === editorOpen)
+			.forEach(({ id, arrow, label, arrowLast }) => {
+				const div = $(overlay).div({ 'class': ['key', id] });
+				if (!arrowLast) {
+					$(div).span({ 'class': 'arrow' }).innerHtml(arrow);
+				}
+				$(div).span({ 'class': 'label' }).text(label);
+				if (arrowLast) {
+					$(div).span({ 'class': 'arrow' }).innerHtml(arrow);
+				}
+			});
 	}
 
 	public dispose(): void {

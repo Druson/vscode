@@ -20,7 +20,7 @@
 }
 
 .welcomeOverlay > .key > .label {
-	padding-left: 1ex;
+	padding: 0 1ex;
 }
 
 .welcomeOverlay > .key.explorer {
@@ -76,5 +76,15 @@
 }
 
 .welcomeOverlay > .key.problems > .label {
+	vertical-align: super;
+}
+
+.welcomeOverlay > .key.openfile {
+	position: absolute;
+	bottom: 25px;
+	right: 45px;
+}
+
+.welcomeOverlay > .key.openfile > .label {
 	vertical-align: super;
 }
